@@ -2,6 +2,7 @@ import axios from "axios";
 import winston from "winston";
 
 export type Options = {
+    apiKey: string,
     ssl?: boolean,
     host?: string,
     path?: string,
@@ -45,6 +46,7 @@ export default class LogUnifyLogger {
     private events: LogUnifyEvent[] = [];
     private isSendingEvents: boolean = false;
     private lastScheduled: number = -1;
+    private apiKey: string;
     private logger;
 
     public static setup(options: Options) {
@@ -63,7 +65,7 @@ export default class LogUnifyLogger {
         return this.instance;
     }
 
-    private constructor(options: Options = {}) {
+    private constructor(options: Options) {
         this.logger = winston.createLogger({
             level: options.logLevel || 'info',
             format: winston.format.combine(
@@ -76,10 +78,12 @@ export default class LogUnifyLogger {
             ]
         });
 
+        this.apiKey = options.apiKey;
         this.configure(options);
     }
 
-    private configure(options: Options = {}) {
+    private configure(options: Options) {
+        this.apiKey = options.apiKey;
         this.ssl = options.ssl || this.ssl;
         this.host = options.host || this.host;
         this.path = options.path || this.path;
@@ -151,7 +155,12 @@ export default class LogUnifyLogger {
             await axios.post(
                 `${this.ssl ? 'https' : 'http'}://${this.host}:${this.port}/${this.path}`,
                 JSON.stringify({ events: postingEvents }),
-                { headers: { 'Content-Type': 'application/json' } }
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Auth-Token': this.apiKey
+                    }
+                }
             );
             this.logger.debug(`Successfully sent ${events.length} events.`);
             return true;
