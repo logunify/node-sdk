@@ -9,10 +9,9 @@ export type Options = {
     port?: number,
     batchInterval?: number,
     minBatchSize?: number,
-    enableDebugLogging?: boolean,
     maxBulkSize?: number,
     maxAttempts?: number,
-    logLevel?: string,
+    enableDebugLog?: boolean,
 }
 const logFormat = winston.format.printf(
     ({ level, message, label, timestamp, event }) => {
@@ -67,7 +66,7 @@ export default class LogUnifyLogger {
 
     private constructor(options: Options) {
         this.logger = winston.createLogger({
-            level: options.logLevel || 'info',
+            level: options.enableDebugLog ? 'debug' : 'info',
             format: winston.format.combine(
                 winston.format.timestamp(),
                 winston.format.label({ label: 'LogUnify' }),
@@ -146,9 +145,8 @@ export default class LogUnifyLogger {
     private async makeRequest(events: LogUnifyEvent[]) {
         const postingEvents = events.map(event => ({
             serializedEvent: Buffer.from(event.serialize()).toString('base64'),
-            // TODO: update when we have the methods generateds
-            schemaName: 'UserActivity',
-            // projectName: event.getProjectName(),
+            schemaName: event.getSchemaName(),
+            projectName: event.getProjectName(),
         }));
 
         try {
