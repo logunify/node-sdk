@@ -3,14 +3,9 @@ import winston from "winston";
 
 export type Options = {
     apiKey: string,
-    ssl?: boolean,
-    host?: string,
-    path?: string,
-    port?: number,
+    receiverURL?: string,
     batchInterval?: number,
     minBatchSize?: number,
-    maxBulkSize?: number,
-    maxAttempts?: number,
     enableDebugLog?: boolean,
 }
 const logFormat = winston.format.printf(
@@ -33,10 +28,7 @@ export interface LogUnifyEvent {
 export default class LogUnifyLogger {
     private static instance: LogUnifyLogger;
 
-    private ssl: boolean = false;
-    private host: string = 'localhost';
-    private path: string = 'api/events/_bulk';
-    private port: number = 80;
+    private receiverURL: string = "http://localhost:8081/api/events/_bulk";
     private batchInterval: number = 5000;
     private minBatchSize: number = 10;
     private maxBulkSize: number = 50;
@@ -83,17 +75,9 @@ export default class LogUnifyLogger {
 
     private configure(options: Options) {
         this.apiKey = options.apiKey;
-        this.ssl = options.ssl || this.ssl;
-        this.host = options.host || this.host;
-        this.path = options.path || this.path;
         this.batchInterval = options.batchInterval || this.batchInterval;
         this.minBatchSize = options.minBatchSize || this.minBatchSize;
-        this.maxBulkSize = options.maxBulkSize || this.maxBulkSize;
-        if (options.maxAttempts != null && options.maxAttempts > 0) {
-            this.maxAttempts = this.maxAttempts;
-        }
-        this.port = options.port || this.port;
-
+        this.receiverURL = options.receiverURL || this.receiverURL;
         return this;
     }
 
@@ -151,7 +135,7 @@ export default class LogUnifyLogger {
 
         try {
             await axios.post(
-                `${this.ssl ? 'https' : 'http'}://${this.host}:${this.port}/${this.path}`,
+                this.receiverURL,
                 JSON.stringify({ events: postingEvents }),
                 {
                     headers: {
