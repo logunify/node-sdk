@@ -125,6 +125,8 @@ export default class LogUnifyLogger {
             }
 
             if (attemptsLeft === 0) {
+                this.isSendingEvents = false;
+
                 this.logger.debug(`Retried ${this.maxAttempts} times but still failed to send, skipping this batch.`);
                 return false;
             }
