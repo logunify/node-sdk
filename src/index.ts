@@ -33,6 +33,7 @@ export default class LogUnifyLogger {
     private minBatchSize: number = 10;
     private maxBulkSize: number = 50;
     private maxAttempts: number = 3;
+    private maxUnsentEvents: number = 5000;
 
     private events: LogUnifyEvent[] = [];
     private isSendingEvents: boolean = false;
@@ -83,6 +84,10 @@ export default class LogUnifyLogger {
 
     log(event: any) {
         this.events.push(event);
+        if (this.events.length > this.maxUnsentEvents) {
+            this.logger.error(`Reached max unsent events of ${this.maxUnsentEvents}, purge the oldest event.`);
+            this.events.splice(0, 1);
+        }
         this.logger.debug("Logged event", { event: event.toObject() });
 
         if (this.lastScheduled == -1 || Date.now() / 1000 - this.lastScheduled > this.batchInterval) {
@@ -111,7 +116,8 @@ export default class LogUnifyLogger {
         while (this.events.length > 0) {
             const bulk = this.events.slice(0, this.maxBulkSize);
             let attemptsLeft = this.maxAttempts;
-            while (attemptsLeft-- > 0) {
+            while (attemptsLeft > 0) {
+                -- attemptsLeft;
                 if (await this.makeRequest(bulk)) {
                     this.events.splice(0, bulk.length);
                     break;
@@ -119,6 +125,7 @@ export default class LogUnifyLogger {
             }
 
             if (attemptsLeft === 0) {
+                this.logger.debug(`Retried ${this.maxAttempts} times but still failed to send, skipping this batch.`);
                 return false;
             }
         }
